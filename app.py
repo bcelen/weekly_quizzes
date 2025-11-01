@@ -20,7 +20,7 @@ with st.container():
     with col2:
         target_mean = st.slider("🎯 Adjusted Average (Target)", min_value=7.4, max_value=7.6, value=7.5, step=0.01)
     with col3:
-        target_pct_above_8 = st.slider("🔥 Max % of Adjusted Scores ≥ 8.0", min_value=0.20, max_value=0.30, value=0.30, step=0.01)
+        target_pct_above_8 = st.slider("🔥 Max % of Adjusted Marks ≥ 8.0", min_value=0.20, max_value=0.30, value=0.30, step=0.01)
 
 week_index = week_labels.index(week_selection)
 filename = week_files[week_index]
@@ -30,83 +30,92 @@ github_url = f"https://raw.githubusercontent.com/bcelen/weekly_quizzes/main/{fil
 
 try:
     df = pd.read_csv(github_url)
-    raw_scores = df.iloc[:, 0].dropna()
-    raw_scores = pd.to_numeric(raw_scores, errors='coerce')
-    raw_scores = raw_scores.dropna()
-    raw_scores = np.clip(raw_scores.values, 0, 10)
+    raw_marks = df.iloc[:, 0].dropna()
+    raw_marks = pd.to_numeric(raw_marks, errors='coerce')
+    raw_marks = raw_marks.dropna()
+    raw_marks = np.clip(raw_marks.values, 0, 10)
 
-    st.success(f"✅ Loaded {filename} with {len(raw_scores)} valid scores.")
+    st.success(f"✅ Loaded {filename} with {len(raw_marks)} valid marks.")
 
     # --- Compute Z Scores ---
-    z_scores = (raw_scores - np.mean(raw_scores)) / np.std(raw_scores)
+    z_scores = (raw_marks - np.mean(raw_marks)) / np.std(raw_marks)
 
     # --- Find std dev to cap % > 8 at user-specified level ---
     z_threshold = norm.ppf(1 - target_pct_above_8)
     required_std = (8 - target_mean) / z_threshold
 
-    adjusted_scores = np.clip(z_scores * required_std + target_mean, 0, 10)
+    adjusted_marks = np.clip(z_scores * required_std + target_mean, 0, 10)
 
-    # --- Sort by original scores ---
-    sorted_indices = np.argsort(raw_scores)
-    raw_sorted = raw_scores[sorted_indices]
-    adjusted_sorted = adjusted_scores[sorted_indices]
+    # --- Sort by original marks ---
+    sorted_indices = np.argsort(raw_marks)
+    raw_sorted = raw_marks[sorted_indices]
+    adjusted_sorted = adjusted_marks[sorted_indices]
 
     # --- Summary Statistics ---
     actual_summary = {
-        "📦 Students": len(raw_scores),
-        "🎯 Mean": round(np.mean(raw_scores), 2),
-        "📐 Std Dev": round(np.std(raw_scores), 2),
-        "🔥 % ≥ 8.0": f"{np.mean(raw_scores >= 8) * 100:.1f}%"
+        "📦 Students": len(raw_marks),
+        "🎯 Mean": round(np.mean(raw_marks), 2),
+        "📐 Std Dev": round(np.std(raw_marks), 2),
+        "🔥 % ≥ 8.0": f"{np.mean(raw_marks >= 8) * 100:.1f}%"
     }
 
     adjusted_summary = {
-        "📦 Students": len(adjusted_scores),
-        "🎯 Mean": round(np.mean(adjusted_scores), 2),
-        "📐 Std Dev": round(np.std(adjusted_scores), 2),
-        "🔥 % ≥ 8.0": f"{np.mean(adjusted_scores >= 8) * 100:.1f}%"
+        "📦 Students": len(adjusted_marks),
+        "🎯 Mean": round(np.mean(adjusted_marks), 2),
+        "📐 Std Dev": round(np.std(adjusted_marks), 2),
+        "🔥 % ≥ 8.0": f"{np.mean(adjusted_marks >= 8) * 100:.1f}%"
     }
 
-    summary_df = pd.DataFrame([actual_summary, adjusted_summary], index=["Actual Scores", "Adjusted Scores"])
+    summary_df = pd.DataFrame([actual_summary, adjusted_summary], index=["Actual Marks", "Adjusted Marks"])
 
     st.subheader("Summary")
     st.dataframe(summary_df)
 
-    # --- Line Graph ---
-    st.subheader("📈 Student Scores (Raw vs Adjusted, Sorted by Raw Scores)")
-    fig, ax = plt.subplots(figsize=(10, 4))
-    ax.plot(range(len(raw_sorted)), raw_sorted, marker='o', linestyle='-', label='Original', color='gray')
-    ax.plot(range(len(adjusted_sorted)), adjusted_sorted, marker='o', linestyle='-', label='Adjusted', color='blue')
-    ax.set_ylim(0, 10)
-    ax.set_xlabel("Student Index (Sorted by Original Score)")
-    ax.set_ylabel("Score")
-    ax.set_title("Student Marks: Raw vs Adjusted")
-    ax.legend()
-    st.pyplot(fig)
-
-    # --- Personal Score Lookup ---
-    st.subheader("🔍 Find Your Adjusted Score and Rank")
+    # --- Personal Mark Lookup ---
+    st.subheader("🔍 Find Your Adjusted Mark and Rank")
     with st.form("lookup_form"):
-        user_score = st.number_input("Enter your actual quiz score (0-10):", min_value=0.0, max_value=10.0, step=0.1)
-        submitted = st.form_submit_button("Find My Adjusted Score")
+        col1, col2 = st.columns(2)
+        with col1:
+            user_mark = st.number_input("Enter your actual quiz mark (0-10):", min_value=0.0, max_value=10.0, step=0.1)
+        submitted = st.form_submit_button("Find My Adjusted Mark")
 
     if submitted:
-        user_z = (user_score - np.mean(raw_scores)) / np.std(raw_scores)
+        user_z = (user_mark - np.mean(raw_marks)) / np.std(raw_marks)
         user_adjusted = round(np.clip(user_z * required_std + target_mean, 0, 10), 2)
-        rank = int(np.sum(adjusted_scores > user_adjusted)) + 1
-        total = len(adjusted_scores)
-        st.info(f"Your adjusted score is: **{user_adjusted}**\n\nYour rank is: **{rank}** out of {total} students.")
+        rank = int(np.sum(adjusted_marks > user_adjusted)) + 1
+        total = len(adjusted_marks)
+
+        with col2:
+            st.markdown(f"""
+                **Your adjusted mark is:** `{user_adjusted}`  
+                **Your rank is:** `{rank}` out of `{total}` students.
+            """)
 
         # --- Add marker to plot ---
-        fig2, ax2 = plt.subplots(figsize=(10, 4))
-        ax2.plot(range(len(raw_sorted)), raw_sorted, marker='o', linestyle='-', label='Original', color='gray')
-        ax2.plot(range(len(adjusted_sorted)), adjusted_sorted, marker='o', linestyle='-', label='Adjusted', color='blue')
-        ax2.axhline(user_adjusted, color='red', linestyle='--', linewidth=1, label='Your Adjusted Score')
-        ax2.set_ylim(0, 10)
-        ax2.set_xlabel("Student Index (Sorted by Original Score)")
-        ax2.set_ylabel("Score")
-        ax2.set_title("Your Score in Context")
-        ax2.legend()
-        st.pyplot(fig2)
+        fig, ax = plt.subplots(figsize=(10, 4))
+        ax.plot(range(len(raw_sorted)), raw_sorted, marker='o', linestyle='-', label='Original', color='gray')
+        ax.plot(range(len(adjusted_sorted)), adjusted_sorted, marker='o', linestyle='-', label='Adjusted', color='blue')
+        ax.axhline(user_adjusted, color='red', linestyle='--', linewidth=1, label='Your Adjusted Mark')
+        ax.axhline(user_mark, color='orange', linestyle='--', linewidth=1, label='Your Original Mark')
+        ax.set_ylim(0, 10)
+        ax.set_xlabel("Student Index (Sorted by Original Mark)")
+        ax.set_ylabel("Mark")
+        ax.set_title("Student Marks: Raw vs Adjusted with Your Mark Highlighted")
+        ax.legend()
+        st.pyplot(fig)
+
+    else:
+        # --- Line Graph ---
+        st.subheader("📈 Student Marks (Raw vs Adjusted, Sorted by Raw Marks)")
+        fig, ax = plt.subplots(figsize=(10, 4))
+        ax.plot(range(len(raw_sorted)), raw_sorted, marker='o', linestyle='-', label='Original', color='gray')
+        ax.plot(range(len(adjusted_sorted)), adjusted_sorted, marker='o', linestyle='-', label='Adjusted', color='blue')
+        ax.set_ylim(0, 10)
+        ax.set_xlabel("Student Index (Sorted by Original Mark)")
+        ax.set_ylabel("Mark")
+        ax.set_title("Student Marks: Raw vs Adjusted")
+        ax.legend()
+        st.pyplot(fig)
 
 except Exception:
     st.warning("⚠️ The quiz marks are not available yet. Please check back later.")
