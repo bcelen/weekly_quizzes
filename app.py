@@ -18,7 +18,10 @@ week_index = week_labels.index(week_selection)
 filename = week_files[week_index]
 
 # Slider for mean selection
-target_mean = st.slider("🎯 Adjusted Average (Target)", min_value=7.4, max_value=7.6, value=7.5, step=0.1)
+target_mean = st.slider("🎯 Adjusted Average (Target)", min_value=7.4, max_value=7.6, value=7.5, step=0.01)
+
+# Slider for maximum percentage of adjusted scores >= 8.0
+target_pct_above_8 = st.slider("🔥 Max % of Adjusted Scores ≥ 8.0", min_value=0.20, max_value=0.30, value=0.30, step=0.01)
 
 # --- Download Raw CSV from GitHub ---
 github_url = f"https://raw.githubusercontent.com/bcelen/weekly_quizzes/main/{filename}"
@@ -35,8 +38,8 @@ try:
     # --- Compute Z Scores ---
     z_scores = (raw_scores - np.mean(raw_scores)) / np.std(raw_scores)
 
-    # --- Find std dev to cap % > 8 at 30% ---
-    z_threshold = norm.ppf(1 - 0.30)
+    # --- Find std dev to cap % > 8 at user-specified level ---
+    z_threshold = norm.ppf(1 - target_pct_above_8)
     required_std = (8 - target_mean) / z_threshold
 
     adjusted_scores = np.clip(z_scores * required_std + target_mean, 0, 10)
