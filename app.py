@@ -10,11 +10,18 @@ st.set_page_config(page_title="Weekly Quiz Adjustment", layout="wide")
 st.title("📊 Weekly Quiz Adjustment Dashboard")
 
 # --- User Input ---
-week = st.selectbox("Select Week", options=[f"week{i}" for i in range(1, 11)], index=0)
+week_labels = [f"Week {i} Quiz results" for i in range(1, 7)]
+week_files = [f"week{i}.csv" for i in range(1, 7)]
+
+week_selection = st.selectbox("Select a quiz week:", options=week_labels)
+week_index = week_labels.index(week_selection)
+filename = week_files[week_index]
+
+# Slider for mean selection
 target_mean = st.slider("🎯 Adjusted Average (Target)", min_value=7.4, max_value=7.6, value=7.5, step=0.1)
 
 # --- Download Raw CSV from GitHub ---
-github_url = f"https://raw.githubusercontent.com/bcelen/weekly_quizzes/main/{week}.csv"
+github_url = f"https://raw.githubusercontent.com/bcelen/weekly_quizzes/main/{filename}"
 
 try:
     df = pd.read_csv(github_url)
@@ -23,7 +30,7 @@ try:
     raw_scores = raw_scores.dropna()
     raw_scores = np.clip(raw_scores.values, 0, 10)
 
-    st.success(f"✅ Loaded {week}.csv with {len(raw_scores)} valid scores.")
+    st.success(f"✅ Loaded {filename} with {len(raw_scores)} valid scores.")
 
     # --- Compute Z Scores ---
     z_scores = (raw_scores - np.mean(raw_scores)) / np.std(raw_scores)
@@ -76,8 +83,7 @@ try:
 
     # --- Download Option ---
     csv = table_df.to_csv(index=False).encode("utf-8")
-    st.download_button("⬇️ Download Adjusted Scores CSV", data=csv, file_name=f"{week}_adjusted.csv")
+    st.download_button("⬇️ Download Adjusted Scores CSV", data=csv, file_name=f"{filename.replace('.csv', '')}_adjusted.csv")
 
-except Exception as e:
-    st.error(f"❌ Could not load data for {week}. Make sure the file exists and is formatted correctly.")
-    st.exception(e)
+except Exception:
+    st.warning("⚠️ The quiz marks are not available yet. Please check back later.")
