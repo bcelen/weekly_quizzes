@@ -46,13 +46,13 @@ github_url = f"https://raw.githubusercontent.com/bcelen/weekly_quizzes/main/{fil
 
 try:
     df = pd.read_csv(github_url)
-    raw_marks = df.iloc[:, 0].dropna()
-    raw_marks = pd.to_numeric(raw_marks, errors='coerce')
-    raw_marks = raw_marks.dropna()
-    raw_marks = np.clip(raw_marks.values, 0, 10)
+    original_marks = df.iloc[:, 0].dropna()
+    original_marks = pd.to_numeric(original_marks, errors='coerce')
+    original_marks = original_marks.dropna()
+    original_marks = np.clip(original_marks.values, 0, 10)
 
     # --- Compute Z Scores ---
-    z_scores = (raw_marks - np.mean(raw_marks)) / np.std(raw_marks)
+    z_scores = (original_marks - np.mean(original_marks)) / np.std(original_marks)
 
     # --- Find std dev to cap % > 8 at user-specified level ---
     z_threshold = norm.ppf(1 - target_pct_above_8)
@@ -61,15 +61,15 @@ try:
     adjusted_marks = np.clip(z_scores * required_std + target_mean, 0, 10)
 
     # --- Sort by original marks ---
-    sorted_indices = np.argsort(raw_marks)
-    raw_sorted = raw_marks[sorted_indices]
+    sorted_indices = np.argsort(original_marks)
+    original_sorted = original_marks[sorted_indices]
     adjusted_sorted = adjusted_marks[sorted_indices]
 
     # --- Summary Statistics ---
-    actual_summary = {
-        "📊 Students": len(raw_marks),
-        "🎯 Mean": f"{np.mean(raw_marks):.2f}",
-        "📐 Std Dev": f"{np.std(raw_marks):.2f}"
+    original_summary = {
+        "📊 Students": len(original_marks),
+        "🎯 Mean": f"{np.mean(original_marks):.2f}",
+        "📐 Std Dev": f"{np.std(original_marks):.2f}"
     }
 
     adjusted_summary = {
@@ -78,7 +78,7 @@ try:
         "📐 Std Dev": f"{np.std(adjusted_marks):.2f}"
     }
 
-    summary_df = pd.DataFrame([actual_summary, adjusted_summary], index=["Actual Marks", "Adjusted Marks"])
+    summary_df = pd.DataFrame([original_summary, adjusted_summary], index=["Original Marks", "Adjusted Marks"])
 
     # --- Summary and Student Lookup ---
     col1, col2 = st.columns(2)
@@ -92,14 +92,14 @@ try:
             input_col, result_col = st.columns(2)
             with input_col:
                 user_mark = st.number_input(
-                    "Enter your actual quiz mark (0-10):",
+                    "Enter your original quiz mark (0-10):",
                     min_value=0.0, max_value=10.0, step=0.1,
                     help="Enter the mark you received to find your adjusted mark and ranking."
                 )
             submitted = st.form_submit_button("Find My Adjusted Mark")
 
         if submitted:
-            user_z = (user_mark - np.mean(raw_marks)) / np.std(raw_marks)
+            user_z = (user_mark - np.mean(original_marks)) / np.std(original_marks)
             user_adjusted = round(np.clip(user_z * required_std + target_mean, 0, 10), 2)
             rank = int(np.sum(adjusted_marks > user_adjusted)) + 1
             total = len(adjusted_marks)
@@ -111,14 +111,14 @@ try:
                 """)
 
     # --- Line Graph ---
-    st.subheader("📈 Distribution of Marks (Raw vs Adjusted)")
+    st.subheader("📈 Distribution of Marks (Original vs Adjusted)")
     fig, ax = plt.subplots(figsize=(10, 4))
-    ax.plot(range(len(raw_sorted)), raw_sorted, marker='o', linestyle='-', label='Original', color='#FF6B6B')
+    ax.plot(range(len(original_sorted)), original_sorted, marker='o', linestyle='-', label='Original', color='#FF6B6B')
     ax.plot(range(len(adjusted_sorted)), adjusted_sorted, marker='o', linestyle='-', label='Adjusted', color='#4D96FF')
     ax.set_ylim(0, 10)
     ax.set_xlabel("Student Index")
     ax.set_ylabel("Mark")
-    ax.set_title("Distribution of Marks (Raw vs Adjusted)")
+    ax.set_title("Distribution of Marks (Original vs Adjusted)")
     ax.legend()
     st.pyplot(fig)
 
