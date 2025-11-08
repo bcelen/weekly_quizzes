@@ -34,7 +34,7 @@ st.markdown(
     """
     > MBS grade policy requires that the **mean of the final marks (out of 100)** be between **74 and 76**, and that the percentage of marks classified as **H1** does not exceed **30%**.  
     > This dashboard applies an adjustment to the quiz marks to reflect these requirements **while preserving the original z-scores**.  
-    > ⚠️ *Although these distributions provide an indication of final outcomes, they may change by the end of the subject, particularly due to zero marks that might be revised after the consensus date.*
+    > ⚠️ *Although these distributions provide an indication of final outcomes, they may change by the end of the subject, particularly due to zero marks that might be revised after the census date.*
     """
 )
 
@@ -79,12 +79,13 @@ try:
     }
 
     summary_df = pd.DataFrame([original_summary, adjusted_summary], index=["Original Marks", "Adjusted Marks"])
+    summary_df.index.name = None  # Remove "0"/"1" row index
 
     # --- Summary and Student Lookup ---
     col1, col2 = st.columns(2)
     with col1:
         st.subheader("📋 Summary")
-        st.dataframe(summary_df)
+        st.dataframe(summary_df, use_container_width=True, hide_index=True)
 
     show_marker = False
     user_adjusted = None
@@ -106,7 +107,8 @@ try:
         if submitted:
             user_z = (user_mark - np.mean(original_marks)) / np.std(original_marks)
             user_adjusted = round(np.clip(user_z * required_std + target_mean, 0, 10), 2)
-            rank = int(np.sum(adjusted_marks > user_adjusted)) + 1
+            epsilon = 1e-6
+            rank = int(np.sum(adjusted_marks > user_adjusted + epsilon)) + 1
             with result_col:
                 st.markdown(f"""
                     **Your adjusted mark is:** `{user_adjusted}`  
@@ -123,8 +125,6 @@ try:
     ax.plot(x_vals, adjusted_sorted, marker='o', linestyle='--', label='Adjusted Marks', color='#4D96FF')
 
     if show_marker:
-        # Find the student’s original index and adjusted value position
-        user_index = np.searchsorted(np.sort(original_marks), user_mark)
         ax.axhline(user_mark, color='#FF6B6B', linestyle=':', label="Your Original Mark")
         ax.axhline(user_adjusted, color='#4D96FF', linestyle=':', label="Your Adjusted Mark")
 
