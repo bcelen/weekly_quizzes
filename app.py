@@ -119,7 +119,7 @@ try:
     # --- Line Graph ---
     st.subheader("📈 Distribution of Marks (Original vs Adjusted)")
     fig, ax = plt.subplots(figsize=(10, 4))
-    x_vals = range(len(original_sorted))
+    x_vals = range(len(original_sorted)) 
 
     ax.plot(x_vals, original_sorted, marker='o', linestyle='-', label='Original Marks', color='#FF6B6B')
     ax.plot(x_vals, adjusted_sorted, marker='o', linestyle='--', label='Adjusted Marks', color='#4D96FF')
