@@ -107,8 +107,7 @@ try:
         if submitted:
             user_z = (user_mark - np.mean(original_marks)) / np.std(original_marks)
             user_adjusted = round(np.clip(user_z * required_std + target_mean, 0, 10), 2)
-            epsilon = 1e-6
-            rank = int(np.sum(adjusted_marks > user_adjusted + epsilon)) + 1
+            rank = int(np.sum(adjusted_marks > user_adjusted + 0.001)) + 1
             with result_col:
                 st.markdown(f"""
                     **Your adjusted mark is:** `{user_adjusted}`  
